@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clickstream Batch Reports</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --mute:#667085; --line:#e4e7ec;
+          --blue:#2f6fed; --peak:#e8590c; --bad:#d92d20; --good:#12805c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#10141a; --card:#181e27; --ink:#e8ecf2; --mute:#98a2b3; --line:#2a3340;
+            --blue:#6e9bff; --peak:#ff8a4c; --bad:#ff6b5e; --good:#4cc9a0; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { padding:20px 24px 4px; display:flex; flex-wrap:wrap; gap:12px; align-items:baseline; }
+  h1 { font-size:20px; margin:0; }
+  .sub { color:var(--mute); font-size:13px; }
+  main { padding:12px 24px 40px; max-width:1180px; margin:0 auto; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:12px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .kpi .l { color:var(--mute); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .v { font-size:26px; font-weight:650; margin-top:2px; }
+  .kpi .d { color:var(--mute); font-size:12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:860px) { .grid { grid-template-columns:1fr; } }
+  h2 { font-size:15px; margin:0 0 10px; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { fill:var(--mute); font-size:11px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--mute); font-weight:600; font-size:12px; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  select { background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; }
+  .note { color:var(--mute); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Clickstream Batch Reports</h1>
+  <span class="sub" id="sub"></span>
+  <span style="flex:1"></span>
+  <label class="sub">Run <select id="runSel"></select></label>
+</header>
+<main>
+  <section class="kpis" id="kpis"></section>
+  <section class="grid">
+    <div class="card"><h2>Traffic by hour of day (UTC)</h2><div id="hours"></div>
+      <div class="note">Highlighted bar = peak-traffic hour.</div></div>
+    <div class="card"><h2>Top 10 pages (most viewed products)</h2><div id="top"></div></div>
+    <div class="card"><h2>Daily error rate (%)</h2><div id="errs"></div>
+      <div class="note">Error = malformed or invalid log record (see README for the rules).</div></div>
+    <div class="card"><h2>Errors by reason</h2><div id="reasons"></div></div>
+  </section>
+  <section class="card" style="margin-top:12px"><h2>Nightly run history</h2><div id="hist"></div></section>
+</main>
+<script>
+const RUNS = [{"run": "2019-10-01", "meta": {"run": "2019-10-01", "input": "/clickstream/raw/dt=2019-10-01", "output": "/clickstream/out/dt=2019-10-01", "queue": "batch", "started_at": "2026-10-14 19:51:50", "finished_at": "2026-10-14 19:51:51", "duration_sec": 1}, "total_events": 101375, "total_errors": 1243, "error_rate": 1.2261, "peak_hour": "19", "peak_events": 8552, "hours": [{"hour": "00", "events": 1962}, {"hour": "01", "events": 1720}, {"hour": "02", "events": 1566}, {"hour": "03", "events": 1788}, {"hour": "04", "events": 1800}, {"hour": "05", "events": 1823}, {"hour": "06", "events": 2259}, {"hour": "07", "events": 2272}, {"hour": "08", "events": 2991}, {"hour": "09", "events": 3243}, {"hour": "10", "events": 3458}, {"hour": "11", "events": 4157}, {"hour": "12", "events": 4282}, {"hour": "13", "events": 4725}, {"hour": "14", "events": 4757}, {"hour": "15", "events": 5387}, {"hour": "16", "events": 6375}, {"hour": "17", "events": 7591}, {"hour": "18", "events": 8225}, {"hour": "19", "events": 8552}, {"hour": "20", "events": 7638}, {"hour": "21", "events": 5686}, {"hour": "22", "events": 4685}, {"hour": "23", "events": 3190}], "top_pages": [{"rank": 1, "product_id": "1000000", "category": "auto.accessories.player", "brand": "huawei", "views": 12258}, {"rank": 2, "product_id": "1000007", "category": "appliances.kitchen.refrigerator", "brand": "lg", "views": 5852}, {"rank": 3, "product_id": "1000014", "category": "stationery.cartrige", "brand": "huawei", "views": 3850}, {"rank": 4, "product_id": "1000021", "category": "electronics.video.tv", "brand": "canon", "views": 2869}, {"rank": 5, "product_id": "1000028", "category": "apparel.jacket", "brand": "apple", "views": 2255}, {"rank": 6, "product_id": "1000035", "category": "kids.toys", "brand": "dell", "views": 1812}, {"rank": 7, "product_id": "1000042", "category": "electronics.smartphone", "brand": "oppo", "views": 1631}, {"rank": 8, "product_id": "1000049", "category": "kids.carriage", "brand": "adidas", "views": 1398}, {"rank": 9, "product_id": "1000056", "category": "appliances.kitchen.refrigerator", "brand": "puma", "views": 1257}, {"rank": 10, "product_id": "1000063", "category": "electronics.smartphone", "brand": "NA", "views": 1065}], "days": [{"day": "2019-10-01", "total": 101130, "errors": 998, "rate": 0.9868}, {"day": "UNKNOWN", "total": 245, "errors": 245, "rate": 100.0}], "reasons": [{"reason": "BAD_PRODUCT_ID", "errors": 262}, {"reason": "BAD_PRICE", "errors": 257}, {"reason": "BAD_EVENT_TYPE", "errors": 247}, {"reason": "WRONG_FIELD_COUNT", "errors": 245}, {"reason": "BAD_USER_ID", "errors": 232}]}, {"run": "2019-10-02", "meta": {"run": "2019-10-02", "input": "/clickstream/raw/dt=2019-10-02", "output": "/clickstream/out/dt=2019-10-02", "queue": "batch", "started_at": "2026-10-14 19:51:52", "finished_at": "2026-10-14 19:51:53", "duration_sec": 1}, "total_events": 100011, "total_errors": 1258, "error_rate": 1.2579, "peak_hour": "19", "peak_events": 8536, "hours": [{"hour": "00", "events": 2115}, {"hour": "01", "events": 2001}, {"hour": "02", "events": 1848}, {"hour": "03", "events": 1527}, {"hour": "04", "events": 1733}, {"hour": "05", "events": 1790}, {"hour": "06", "events": 2006}, {"hour": "07", "events": 2360}, {"hour": "08", "events": 2690}, {"hour": "09", "events": 3093}, {"hour": "10", "events": 3622}, {"hour": "11", "events": 4266}, {"hour": "12", "events": 4312}, {"hour": "13", "events": 4607}, {"hour": "14", "events": 4926}, {"hour": "15", "events": 5472}, {"hour": "16", "events": 5988}, {"hour": "17", "events": 7351}, {"hour": "18", "events": 7792}, {"hour": "19", "events": 8536}, {"hour": "20", "events": 7436}, {"hour": "21", "events": 5999}, {"hour": "22", "events": 4145}, {"hour": "23", "events": 3138}], "top_pages": [{"rank": 1, "product_id": "1000000", "category": "auto.accessories.player", "brand": "huawei", "views": 12001}, {"rank": 2, "product_id": "1000007", "category": "appliances.kitchen.refrigerator", "brand": "lg", "views": 5936}, {"rank": 3, "product_id": "1000014", "category": "stationery.cartrige", "brand": "huawei", "views": 3862}, {"rank": 4, "product_id": "1000021", "category": "electronics.video.tv", "brand": "canon", "views": 2777}, {"rank": 5, "product_id": "1000028", "category": "apparel.jacket", "brand": "apple", "views": 2223}, {"rank": 6, "product_id": "1000035", "category": "kids.toys", "brand": "dell", "views": 1931}, {"rank": 7, "product_id": "1000042", "category": "electronics.smartphone", "brand": "oppo", "views": 1573}, {"rank": 8, "product_id": "1000049", "category": "kids.carriage", "brand": "adidas", "views": 1337}, {"rank": 9, "product_id": "1000056", "category": "appliances.kitchen.refrigerator", "brand": "puma", "views": 1190}, {"rank": 10, "product_id": "1000063", "category": "electronics.smartphone", "brand": "NA", "views": 1055}], "days": [{"day": "2019-10-02", "total": 99761, "errors": 1008, "rate": 1.0104}, {"day": "UNKNOWN", "total": 250, "errors": 250, "rate": 100.0}], "reasons": [{"reason": "BAD_PRODUCT_ID", "errors": 260}, {"reason": "BAD_USER_ID", "errors": 254}, {"reason": "BAD_EVENT_TYPE", "errors": 252}, {"reason": "WRONG_FIELD_COUNT", "errors": 250}, {"reason": "BAD_PRICE", "errors": 242}]}, {"run": "2019-10-03", "meta": {"run": "2019-10-03", "input": "/clickstream/raw/dt=2019-10-03", "output": "/clickstream/out/dt=2019-10-03", "queue": "batch", "started_at": "2026-10-14 19:51:54", "finished_at": "2026-10-14 19:51:55", "duration_sec": 1}, "total_events": 102136, "total_errors": 1265, "error_rate": 1.2385, "peak_hour": "19", "peak_events": 8579, "hours": [{"hour": "00", "events": 2434}, {"hour": "01", "events": 1942}, {"hour": "02", "events": 1634}, {"hour": "03", "events": 1595}, {"hour": "04", "events": 1690}, {"hour": "05", "events": 1858}, {"hour": "06", "events": 2136}, {"hour": "07", "events": 2385}, {"hour": "08", "events": 2922}, {"hour": "09", "events": 3440}, {"hour": "10", "events": 3410}, {"hour": "11", "events": 4266}, {"hour": "12", "events": 4697}, {"hour": "13", "events": 4881}, {"hour": "14", "events": 5193}, {"hour": "15", "events": 5154}, {"hour": "16", "events": 5941}, {"hour": "17", "events": 7474}, {"hour": "18", "events": 8133}, {"hour": "19", "events": 8579}, {"hour": "20", "events": 7642}, {"hour": "21", "events": 6118}, {"hour": "22", "events": 4255}, {"hour": "23", "events": 3092}], "top_pages": [{"rank": 1, "product_id": "1000000", "category": "auto.accessories.player", "brand": "huawei", "views": 12240}, {"rank": 2, "product_id": "1000007", "category": "appliances.kitchen.refrigerator", "brand": "lg", "views": 5938}, {"rank": 3, "product_id": "1000014", "category": "stationery.cartrige", "brand": "huawei", "views": 3863}, {"rank": 4, "product_id": "1000021", "category": "electronics.video.tv", "brand": "canon", "views": 2841}, {"rank": 5, "product_id": "1000028", "category": "apparel.jacket", "brand": "apple", "views": 2310}, {"rank": 6, "product_id": "1000035", "category": "kids.toys", "brand": "dell", "views": 1894}, {"rank": 7, "product_id": "1000042", "category": "electronics.smartphone", "brand": "oppo", "views": 1552}, {"rank": 8, "product_id": "1000049", "category": "kids.carriage", "brand": "adidas", "views": 1439}, {"rank": 9, "product_id": "1000056", "category": "appliances.kitchen.refrigerator", "brand": "puma", "views": 1146}, {"rank": 10, "product_id": "1000063", "category": "electronics.smartphone", "brand": "NA", "views": 1089}], "days": [{"day": "2019-10-03", "total": 101883, "errors": 1012, "rate": 0.9933}, {"day": "UNKNOWN", "total": 253, "errors": 253, "rate": 100.0}], "reasons": [{"reason": "BAD_EVENT_TYPE", "errors": 288}, {"reason": "WRONG_FIELD_COUNT", "errors": 253}, {"reason": "BAD_USER_ID", "errors": 248}, {"reason": "BAD_PRODUCT_ID", "errors": 242}, {"reason": "BAD_PRICE", "errors": 234}]}, {"run": "2019-11-01", "meta": {"run": "2019-11-01", "input": "/clickstream/raw/dt=2019-11-01", "output": "/clickstream/out/dt=2019-11-01", "queue": "batch", "started_at": "2026-10-14 21:02:20", "finished_at": "2026-10-14 21:03:21", "duration_sec": 61}, "total_events": 1445360, "total_errors": 1237, "error_rate": 0.0856, "peak_hour": "16", "peak_events": 104679, "hours": [{"hour": "00", "events": 10885}, {"hour": "01", "events": 13990}, {"hour": "02", "events": 32470}, {"hour": "03", "events": 49319}, {"hour": "04", "events": 61442}, {"hour": "05", "events": 73294}, {"hour": "06", "events": 76071}, {"hour": "07", "events": 79324}, {"hour": "08", "events": 79720}, {"hour": "09", "events": 76735}, {"hour": "10", "events": 75620}, {"hour": "11", "events": 71346}, {"hour": "12", "events": 72687}, {"hour": "13", "events": 81677}, {"hour": "14", "events": 91477}, {"hour": "15", "events": 100072}, {"hour": "16", "events": 104679}, {"hour": "17", "events": 96057}, {"hour": "18", "events": 76189}, {"hour": "19", "events": 53304}, {"hour": "20", "events": 31097}, {"hour": "21", "events": 18045}, {"hour": "22", "events": 10715}, {"hour": "23", "events": 7908}], "top_pages": [{"rank": 1, "product_id": "1004856", "category": "electronics.smartphone", "brand": "samsung", "views": 13626}, {"rank": 2, "product_id": "1005115", "category": "electronics.smartphone", "brand": "apple", "views": 12937}, {"rank": 3, "product_id": "1004767", "category": "electronics.smartphone", "brand": "samsung", "views": 12298}, {"rank": 4, "product_id": "1004249", "category": "electronics.smartphone", "brand": "apple", "views": 7420}, {"rank": 5, "product_id": "1005105", "category": "electronics.smartphone", "brand": "apple", "views": 7265}, {"rank": 6, "product_id": "1004870", "category": "electronics.smartphone", "brand": "samsung", "views": 6678}, {"rank": 7, "product_id": "1004833", "category": "electronics.smartphone", "brand": "samsung", "views": 6670}, {"rank": 8, "product_id": "4804056", "category": "electronics.audio.headphone", "brand": "apple", "views": 6421}, {"rank": 9, "product_id": "1002544", "category": "electronics.smartphone", "brand": "apple", "views": 6407}, {"rank": 10, "product_id": "1005160", "category": "electronics.smartphone", "brand": "xiaomi", "views": 6331}], "days": [{"day": "2019-11-01", "total": 1445360, "errors": 1237, "rate": 0.0856}], "reasons": [{"reason": "BAD_PRICE", "errors": 1237}]}];
+const fmt = n => n.toLocaleString("en-US");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+
+function svg(w, h, inner) { return `<svg viewBox="0 0 ${w} ${h}" role="img">${inner}</svg>`; }
+
+function barChart(el, items, peakKey) {
+  const W = 560, H = 230, L = 44, B = 24, T = 8, R = 6;
+  const max = Math.max(...items.map(i => i.v), 1);
+  const bw = (W - L - R) / items.length;
+  let s = "";
+  for (let k = 0; k <= 4; k++) {
+    const y = T + (H - T - B) * (1 - k / 4);
+    s += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${css('--line')}"/>`;
+    s += `<text x="${L-6}" y="${y+4}" text-anchor="end">${fmt(Math.round(max*k/4))}</text>`;
+  }
+  items.forEach((it, i) => {
+    const h = (H - T - B) * it.v / max, x = L + i * bw + 1.5, y = H - B - h;
+    const col = it.k === peakKey ? css('--peak') : css('--blue');
+    s += `<rect x="${x}" y="${y}" width="${Math.max(bw-3,1)}" height="${h}" rx="2" fill="${col}"><title>${esc(it.k)}:00 - ${fmt(it.v)} events</title></rect>`;
+    if (i % 3 === 0) s += `<text x="${x+bw/2-1.5}" y="${H-8}" text-anchor="middle">${esc(it.k)}</text>`;
+  });
+  el.innerHTML = svg(W, H, s);
+}
+
+function hbars(el, rows) {
+  const W = 560, rowH = 26, L = 190, R = 70, H = rows.length * rowH + 6;
+  const max = Math.max(...rows.map(r => r.v), 1);
+  let s = "";
+  rows.forEach((r, i) => {
+    const y = 3 + i * rowH, w = (W - L - R) * r.v / max;
+    s += `<text x="${L-8}" y="${y+16}" text-anchor="end">${esc(r.label)}</text>`;
+    s += `<rect x="${L}" y="${y+3}" width="${Math.max(w,1)}" height="${rowH-9}" rx="3" fill="${css('--blue')}"><title>${esc(r.tip||r.label)}</title></rect>`;
+    s += `<text x="${L+w+6}" y="${y+16}">${fmt(r.v)}</text>`;
+  });
+  el.innerHTML = svg(W, H, s);
+}
+
+function lineChart(el, pts) {
+  const W = 560, H = 210, L = 44, B = 28, T = 10, R = 14;
+  if (!pts.length) { el.textContent = "No data"; return; }
+  const max = Math.max(...pts.map(p => p.v), 0.01) * 1.15;
+  const X = i => L + (pts.length === 1 ? (W-L-R)/2 : (W-L-R) * i / (pts.length-1));
+  const Y = v => T + (H-T-B) * (1 - v / max);
+  let s = "";
+  for (let k = 0; k <= 4; k++) {
+    const y = T + (H-T-B) * (1 - k/4);
+    s += `<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="${css('--line')}"/>`;
+    s += `<text x="${L-6}" y="${y+4}" text-anchor="end">${(max*k/4).toFixed(2)}</text>`;
+  }
+  s += `<polyline fill="none" stroke="${css('--bad')}" stroke-width="2" points="${pts.map((p,i)=>X(i)+','+Y(p.v)).join(' ')}"/>`;
+  pts.forEach((p, i) => {
+    s += `<circle cx="${X(i)}" cy="${Y(p.v)}" r="3.5" fill="${css('--bad')}"><title>${esc(p.k)}: ${p.v.toFixed(3)}%</title></circle>`;
+    s += `<text x="${X(i)}" y="${H-8}" text-anchor="middle">${esc(p.k.slice(5))}</text>`;
+  });
+  el.innerHTML = svg(W, H, s);
+}
+
+function table(el, head, rows) {
+  el.innerHTML = "<table><thead><tr>" + head.map(h => `<th class="${h.n?'n':''}">${esc(h.t)}</th>`).join("") +
+    "</tr></thead><tbody>" + rows.map(r => "<tr>" + r.map((c, i) => `<td class="${head[i].n?'n':''}">${c}</td>`).join("") + "</tr>").join("") + "</tbody></table>";
+}
+
+function render(run) {
+  const r = RUNS.find(x => x.run === run);
+  const peak = r.peak_hour;
+  document.getElementById("sub").textContent =
+    "Batch run " + r.run + (r.meta.input ? " | input: " + r.meta.input : "") +
+    (r.meta.finished_at ? " | finished " + r.meta.finished_at : "");
+  const top1 = r.top_pages[0];
+  document.getElementById("kpis").innerHTML = [
+    ["Events processed", fmt(r.total_events), "valid + invalid records"],
+    ["Peak-traffic hour", peak ? peak + ":00-" + peak + ":59" : "n/a", peak ? fmt(r.peak_events) + " events" : ""],
+    ["Top page", top1 ? "Product " + esc(top1.product_id) : "n/a", top1 ? fmt(top1.views) + " views" : ""],
+    ["Error rate", r.error_rate.toFixed(3) + "%", fmt(r.total_errors) + " invalid records"],
+  ].map(k => `<div class="card kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="d">${k[2]}</div></div>`).join("");
+
+  barChart(document.getElementById("hours"), r.hours.map(h => ({k: h.hour, v: h.events})), peak);
+  hbars(document.getElementById("top"), r.top_pages.map(p => ({
+    label: "#" + p.rank + "  " + p.product_id + "  " + (p.category.split(".").pop() || p.category),
+    v: p.views, tip: p.category + " / " + p.brand })));
+  lineChart(document.getElementById("errs"), r.days.filter(d => d.day !== "UNKNOWN" && d.rate !== null).map(d => ({k: d.day, v: d.rate})));
+  table(document.getElementById("reasons"), [{t: "Reason"}, {t: "Records", n: 1}, {t: "Share", n: 1}],
+    r.reasons.map(x => [esc(x.reason), fmt(x.errors), (100 * x.errors / Math.max(r.total_errors, 1)).toFixed(1) + "%"]));
+}
+
+function renderHistory() {
+  const rows = RUNS.slice().reverse().map(r => [esc(r.run), fmt(r.total_events),
+    r.peak_hour ? r.peak_hour + ":00" : "-", esc(r.top_pages[0] ? r.top_pages[0].product_id : "-"),
+    r.error_rate.toFixed(3) + "%", esc(r.meta.duration_sec != null ? r.meta.duration_sec + " s" : "-")]);
+  table(document.getElementById("hist"),
+    [{t: "Run"}, {t: "Events", n: 1}, {t: "Peak hour"}, {t: "#1 product"}, {t: "Error rate", n: 1}, {t: "Batch time", n: 1}], rows);
+}
+
+const sel = document.getElementById("runSel");
+RUNS.slice().reverse().forEach(r => { const o = document.createElement("option"); o.value = o.textContent = r.run; sel.appendChild(o); });
+sel.onchange = () => render(sel.value);
+render(RUNS[RUNS.length - 1].run);
+renderHistory();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render(sel.value));
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!--
+  YARN CapacityScheduler: a dedicated "batch" queue for the nightly clickstream jobs.
+
+  Merge these <property> blocks into $HADOOP_HOME/etc/hadoop/capacity-scheduler.xml
+  (replace the existing yarn.scheduler.capacity.root.queues / .default.capacity entries), then:
+
+      yarn rmadmin -refreshQueues
+      yarn queue -status batch
+
+  Jobs are sent to the queue with  -Dmapreduce.job.queuename=batch  (done by scripts/run_nightly.sh).
+  Capacities of sibling queues must add up to 100.
+
+  Also make sure yarn-site.xml has:
+      yarn.resourcemanager.scheduler.class =
+          org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler
+-->
+<configuration>
+  <property>
+    <name>yarn.scheduler.capacity.root.queues</name>
+    <value>default,batch</value>
+  </property>
+
+  <!-- interactive / ad-hoc work keeps 30% -->
+  <property>
+    <name>yarn.scheduler.capacity.root.default.capacity</name>
+    <value>30</value>
+  </property>
+
+  <!-- nightly batch gets 70% guaranteed and may grow to 90% when the cluster is idle -->
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.capacity</name>
+    <value>70</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.maximum-capacity</name>
+    <value>90</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.state</name>
+    <value>RUNNING</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.acl_submit_applications</name>
+    <value>*</value>
+  </property>
+  <!-- the 3 report jobs run at the same time: allow their ApplicationMasters up to 30% of the queue -->
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.maximum-am-resource-percent</name>
+    <value>0.3</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.capacity.root.batch.user-limit-factor</name>
+    <value>1</value>
+  </property>
+</configuration>

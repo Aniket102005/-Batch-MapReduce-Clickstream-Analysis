@@ -1,0 +1,14 @@
+# Install with:  crontab -e   (then paste, adjusting the paths)  |  check with:  crontab -l
+#
+# cron starts jobs with a nearly empty environment, so set the variables Hadoop needs.
+SHELL=/bin/bash
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+HADOOP_HOME=/opt/hadoop
+PATH=/opt/hadoop/bin:/opt/hadoop/sbin:/usr/local/bin:/usr/bin:/bin
+
+# min hour dom mon dow  command
+# Every night at 01:30 process the previous day's partition and rebuild the dashboard.
+30 1 * * * /opt/clickstream-mapreduce/scripts/run_nightly.sh >> /opt/clickstream-mapreduce/logs/cron.log 2>&1
+
+# Optional: copy the dashboard to a web root after the batch (runs at 03:00).
+# 0 3 * * * cp /opt/clickstream-mapreduce/dashboard/index.html /var/www/html/clickstream.html

@@ -1,0 +1,8 @@
+target/
+work/
+logs/
+.nightly.lock
+data/kaggle/
+data/*.csv
+data/daily/
+__pycache__/

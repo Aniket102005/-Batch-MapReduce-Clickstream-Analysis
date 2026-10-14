@@ -1,0 +1,78 @@
+# Single-node Hadoop 3 cluster (HDFS + YARN) in Docker, for running this project without installing Hadoop.
+#
+#   docker compose up -d            # start (wait ~30-60 s for HDFS to leave safe mode)
+#   docker compose exec resourcemanager bash     # shell with hadoop/hdfs/yarn commands; project is at /project
+#   docker compose down             # stop (add -v to also wipe HDFS data)
+#
+# Web UIs:  HDFS http://localhost:9870    YARN http://localhost:8088
+# Cluster settings live in docker/hadoop.env.
+services:
+  namenode:
+    image: apache/hadoop:3
+    hostname: namenode
+    user: root
+    command: ["hdfs", "namenode"]
+    ports:
+      - "9870:9870"
+    env_file:
+      - ./docker/hadoop.env
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name/current"
+    volumes:
+      - namenode-data:/tmp/hadoop-root/dfs/name
+
+  datanode:
+    image: apache/hadoop:3
+    hostname: datanode
+    user: root
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./docker/hadoop.env
+    volumes:
+      - datanode-data:/tmp/hadoop-root/dfs/data
+    depends_on:
+      - namenode
+
+  resourcemanager:
+    image: apache/hadoop:3
+    hostname: resourcemanager
+    user: root
+    command: ["yarn", "resourcemanager"]
+    ports:
+      - "8088:8088"
+    env_file:
+      - ./docker/hadoop.env
+    volumes:
+      - ./:/project            # project files, data/ and reports/ are shared with your computer
+    depends_on:
+      - namenode
+
+  nodemanager:
+    image: apache/hadoop:3
+    hostname: nodemanager
+    user: root
+    command: ["yarn", "nodemanager"]
+    ports:
+      - "8042:8042"
+    env_file:
+      - ./docker/hadoop.env
+    volumes:
+      - ./:/project
+    depends_on:
+      - resourcemanager
+
+  historyserver:
+    image: apache/hadoop:3
+    hostname: historyserver
+    user: root
+    command: ["mapred", "historyserver"]
+    ports:
+      - "19888:19888"
+    env_file:
+      - ./docker/hadoop.env
+    depends_on:
+      - resourcemanager
+
+volumes:
+  namenode-data:
+  datanode-data:

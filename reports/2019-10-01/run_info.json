@@ -1,0 +1,2 @@
+{"run": "2019-10-01", "input": "/clickstream/raw/dt=2019-10-01", "output": "/clickstream/out/dt=2019-10-01", "queue": "batch",
+ "started_at": "2026-10-14 19:51:50", "finished_at": "2026-10-14 19:51:51", "duration_sec": 1}
